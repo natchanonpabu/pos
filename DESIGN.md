@@ -28,7 +28,8 @@
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Client State | Zustand |
 | Server Data | async Server Components + Server Actions |
-| Database | [กำหนดภายหลัง — Prisma + SQLite หรือ Supabase] |
+| Database | Supabase (PostgreSQL) |
+| Real-time | Supabase Realtime subscriptions |
 
 **ทำไมถึงเลือก Zustand ไม่ใช่ Redux:**
 - State ของ POS อยู่ระดับ medium (cart, session, UI) — ไม่ซับซ้อนพอที่ Redux จะคุ้ม
@@ -40,13 +41,20 @@
 ## Key Data Models
 
 ```typescript
+type Table = {
+  id: string
+  number: number
+  isActive: boolean
+}
+
 type Product = {
   id: string
   name: string
   price: number
   stock: number
   category: string
-  imageUrl?: string
+  imageUrl: string | null
+  isAvailable: boolean
 }
 
 type OrderItem = {
@@ -56,13 +64,18 @@ type OrderItem = {
   quantity: number
 }
 
+type OrderStatus = 'pending' | 'confirmed' | 'paid' | 'cancelled'
+type OrderSource = 'staff' | 'customer'
+
 type Order = {
   id: string
+  tableId: string | null
+  source: OrderSource
   items: OrderItem[]
   subtotal: number
   discount: number
   total: number
-  status: 'pending' | 'paid' | 'cancelled'
+  status: OrderStatus
   createdAt: Date
 }
 
@@ -82,17 +95,22 @@ type Payment = {
 
 ```
 app/
-├── page.tsx                    → / (POS Terminal — หน้าหลัก)
-├── products/
-│   ├── page.tsx                → /products (Product list)
-│   └── [id]/
-│       └── page.tsx            → /products/[id] (Edit product)
-├── orders/
-│   ├── page.tsx                → /orders (Order history)
-│   └── [id]/
-│       └── page.tsx            → /orders/[id] (Order detail + receipt)
-└── reports/
-    └── page.tsx                → /reports (Sales dashboard)
+├── layout.tsx                          # Root layout
+├── (pos)/                              # Route group — staff interface
+│   ├── page.tsx                    → / (POS Terminal — หน้าหลัก)
+│   ├── products/
+│   │   ├── page.tsx                → /products (Product list)
+│   │   └── [id]/
+│   │       └── page.tsx            → /products/[id] (Edit product)
+│   ├── orders/
+│   │   ├── page.tsx                → /orders (Order history)
+│   │   └── [id]/
+│   │       └── page.tsx            → /orders/[id] (Order detail + receipt)
+│   └── reports/
+│       └── page.tsx                → /reports (Sales dashboard)
+└── table/
+    └── [tableId]/
+        └── page.tsx                → /table/[tableId] (Customer order page)
 ```
 
 ---
@@ -108,15 +126,17 @@ app/
 
 ## Component Hierarchy (หลัก)
 
+**Staff (POS Terminal):**
 ```
-app/page.tsx (Server Component)
-└── POSLayout (Client — ต้องการ state)
-    ├── ProductGrid (Server — fetch products)
-    │   └── ProductCard[] (Server)
-    └── CartSidebar (Client — Zustand cart store)
-        ├── CartItemList
-        ├── DiscountInput
-        └── CheckoutButton → PaymentModal (Client)
+app/(pos)/page.tsx (Server Component)
+└── components/pos/IncomingOrderQueue (Client — Supabase real-time)
+```
+
+**Customer (Table Order):**
+```
+app/table/[tableId]/page.tsx (Server Component — fetches table + products)
+├── components/customer/MenuGrid (Client — แสดงสินค้าตาม category)
+└── components/customer/CartDrawer (Client — Zustand customer-cart store)
 ```
 
 ---
@@ -125,11 +145,18 @@ app/page.tsx (Server Component)
 
 | Store | ข้อมูล |
 |-------|--------|
-| `cart.store.ts` | items, quantities, discount |
-| `session.store.ts` | cashier name, shift start |
-| `ui.store.ts` | modal open/close, sidebar state |
+| `customer-cart.store.ts` | items, quantities สำหรับ customer ordering |
 
 **ไม่ใช้ Zustand สำหรับ**: product list, order history, reports — ดึงจาก Server Components
+
+## Real-time (Supabase)
+
+| Hook | ทำอะไร |
+|------|--------|
+| `useIncomingOrders` | subscribe pending customer orders → แสดงใน POS Terminal |
+
+- ใช้ `supabase.channel().on('postgres_changes', ...)` สำหรับ real-time updates
+- Source of truth: `supabase/schema.sql`
 
 ---
 

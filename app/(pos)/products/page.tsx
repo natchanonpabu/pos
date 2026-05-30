@@ -1,7 +1,8 @@
-export default function ProductsPage() {
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold">Products</h1>
-    </div>
-  )
+import { productService } from '@/services/product.service'
+import { ProductsTemplate } from '@/components/feature/products/template/products-template'
+
+export default async function ProductsPage() {
+  const products = await productService.getAll()
+
+  return <ProductsTemplate products={products} />
 }

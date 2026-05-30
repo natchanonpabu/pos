@@ -9,6 +9,8 @@
 
 ## Core Features (MVP)
 
+- [x] **Authentication** — Login/Logout, session management, role-based access
+- [x] **User Management** — จัดการ users (admin/manager/staff roles)
 - [ ] **Product catalog** — แสดงและจัดการสินค้า (ชื่อ, ราคา, สต๊อก, หมวดหมู่)
 - [ ] **POS Terminal** — เลือกสินค้า, ปรับ quantity, เพิ่มส่วนลด
 - [ ] **Cart & Order** — สร้าง order จาก cart, ยืนยัน/ยกเลิก
@@ -124,19 +126,27 @@ app/
 
 ---
 
-## Component Hierarchy (หลัก)
+## Component Hierarchy (Atomic Design)
 
 **Staff (POS Terminal):**
 ```
 app/(pos)/page.tsx (Server Component)
-└── components/pos/IncomingOrderQueue (Client — Supabase real-time)
+└── components/feature/pos/template/PosTerminalTemplate (Client)
+    └── organisms/IncomingOrderQueue (Client — real-time hook)
+        └── molecules/OrderCard
+            └── atoms/TableLabel, OrderPrice, OrderBadge
 ```
 
 **Customer (Table Order):**
 ```
-app/table/[tableId]/page.tsx (Server Component — fetches table + products)
-├── components/customer/MenuGrid (Client — แสดงสินค้าตาม category)
-└── components/customer/CartDrawer (Client — Zustand customer-cart store)
+app/table/[tableId]/page.tsx (Server Component — uses services)
+└── components/feature/customer/template/CustomerOrderTemplate (Client)
+    ├── organisms/MenuGrid
+    │   └── molecules/MenuSection
+    │       └── atoms/ProductCard
+    └── organisms/CartDrawer
+        └── molecules/CartItem
+            └── atoms/QuantityControl
 ```
 
 ---

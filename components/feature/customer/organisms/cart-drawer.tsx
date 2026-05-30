@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { useCustomerCartStore } from '@/store/customer-cart.store'
 import { createCustomerOrder } from '@/actions/orders'
+import { CartItem } from '../molecules'
 import type { OrderItem } from '@/types/order'
 
 type CartDrawerProps = {
@@ -13,7 +14,7 @@ type CartDrawerProps = {
 }
 
 export function CartDrawer({ tableId }: CartDrawerProps) {
-  const { items, updateQuantity, removeItem, clear, total } = useCustomerCartStore()
+  const { items, updateQuantity, clear, total } = useCustomerCartStore()
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [ordered, setOrdered] = useState(false)
@@ -63,33 +64,12 @@ export function CartDrawer({ tableId }: CartDrawerProps) {
         ) : (
           <div className="mt-4 space-y-3">
             {items.map((item) => (
-              <div key={item.product.id} className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{item.product.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    ฿{(item.product.price * item.quantity).toFixed(0)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                  >
-                    −
-                  </Button>
-                  <span className="w-6 text-center text-sm">{item.quantity}</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
+              <CartItem
+                key={item.product.id}
+                item={item}
+                onIncrement={() => updateQuantity(item.product.id, item.quantity + 1)}
+                onDecrement={() => updateQuantity(item.product.id, item.quantity - 1)}
+              />
             ))}
 
             <Separator />

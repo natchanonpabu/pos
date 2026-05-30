@@ -1,0 +1,6 @@
+export { authService } from './auth.service'
+export { orderService } from './order.service'
+export { paymentService } from './payment.service'
+export { productService } from './product.service'
+export { tableService } from './table.service'
+export { userService } from './user.service'

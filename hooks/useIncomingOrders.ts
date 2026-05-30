@@ -1,52 +1,38 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
+import { orderService, type OrderRow } from '@/services/order.service'
 
-export type IncomingOrder = {
-  id: string
-  table_id: string | null
-  source: 'staff' | 'customer'
-  total: number
-  status: string
-  created_at: string
-}
+export type IncomingOrder = OrderRow
 
-export function useIncomingOrders() {
+export function useIncomingOrders(): IncomingOrder[] {
   const [orders, setOrders] = useState<IncomingOrder[]>([])
 
   useEffect(() => {
-    // โหลด pending customer orders ที่มีอยู่แล้ว
-    supabase
-      .from('orders')
-      .select('*')
-      .eq('source', 'customer')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) setOrders(data as IncomingOrder[])
-      })
+    orderService.getPendingCustomerOrders().then(setOrders)
 
-    // Subscribe real-time insertions
     const channel = supabase
       .channel('incoming-orders')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders', filter: "source=eq.customer" },
-        (payload) => {
-          setOrders((prev) => [payload.new as IncomingOrder, ...prev])
-        }
+        { event: 'INSERT', schema: 'public', table: 'orders', filter: 'source=eq.customer' },
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          setOrders((prev: IncomingOrder[]) => [payload.new as IncomingOrder, ...prev])
+        },
       )
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'orders' },
-        (payload) => {
-          setOrders((prev) =>
+        (payload: RealtimePostgresChangesPayload<Record<string, unknown>>) => {
+          const updated = payload.new as IncomingOrder
+          setOrders((prev: IncomingOrder[]) =>
             prev
-              .map((o) => (o.id === payload.new.id ? (payload.new as IncomingOrder) : o))
-              .filter((o) => o.status === 'pending')
+              .map((o: IncomingOrder) => (o.id === updated.id ? updated : o))
+              .filter((o: IncomingOrder) => o.status === 'pending'),
           )
-        }
+        },
       )
       .subscribe()
 

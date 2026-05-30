@@ -88,15 +88,63 @@ supabase/schema.sql    → source of truth สำหรับ DB schema
 │   └── table/                # Customer routes
 ├── components/
 │   ├── ui/                   # shadcn/ui (ห้ามแก้)
-│   ├── pos/                  # POS terminal components
-│   └── customer/             # Customer-facing components
-├── actions/                  # Server Actions
+│   └── feature/              # Feature components (Atomic Design)
+│       ├── pos/              # POS terminal feature
+│       │   ├── atoms/        # Basic UI elements
+│       │   ├── molecules/    # Atom compositions
+│       │   ├── organisms/    # Complex sections
+│       │   ├── template/     # Page-level layout
+│       │   └── types.ts
+│       └── customer/         # Customer-facing feature
+│           ├── atoms/
+│           ├── molecules/
+│           ├── organisms/
+│           ├── template/
+│           └── types.ts
+├── services/                 # Service layer (data fetching)
+├── actions/                  # Server Actions (mutations)
 ├── lib/                      # utilities (utils.ts, supabase.ts)
-├── hooks/                    # custom hooks (use<Name>.ts)
+├── hooks/                    # custom hooks (use<Name>.ts) — real-time
 ├── store/                    # Zustand stores
 ├── supabase/                 # DB schema + migrations
 └── types/                    # TypeScript types
 ```
+
+## Component Architecture: Atomic Design (feature-arch)
+
+ทุก feature ใช้โครงสร้าง Atomic Design:
+
+| Level | หน้าที่ | ตัวอย่าง |
+|-------|---------|---------|
+| atoms | UI element เดียว, presentational | OrderBadge, ProductCard, QuantityControl |
+| molecules | compose atoms 2-3 ตัว + มี logic | OrderCard, MenuSection, CartItem |
+| organisms | complete section, ใช้ hooks/service | IncomingOrderQueue, MenuGrid, CartDrawer |
+| template | full page layout, compose organisms | PosTerminalTemplate, CustomerOrderTemplate |
+
+**Rules:**
+- atoms ห้าม import molecules/organisms/template
+- molecules ห้าม import organisms/template
+- organisms ห้าม import template
+- ทุก level ต้องมี `index.ts` สำหรับ barrel exports
+- feature มี `types.ts` แยก
+
+## Service Layer (service-gen)
+
+```
+services/
+├── order.service.ts      # Order queries + status updates
+├── product.service.ts    # Product queries
+├── table.service.ts      # Table queries
+└── index.ts              # Barrel exports
+```
+
+**Pattern:**
+- Object-based service: `export const orderService = { ... }`
+- ใช้ Supabase client โดยตรง
+- ไม่ใช้ data-fetching library (ไม่มี React Query/SWR)
+- Server Components ใช้ service methods ดึงข้อมูล
+- Client hooks (real-time) อยู่ใน `hooks/`
+- Mutations อยู่ใน `actions/` (Server Actions)
 
 ---
 
